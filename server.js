@@ -6,25 +6,34 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(express.static('.')); // index.html ni o'qishi uchun
 
+// OpenAI API-ni ulash
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-app.post('/generate', async (req, res) => {
+// Asosiy rasm yaratish funksiyasi
+app.post('/api/generate', async (req, res) => {
     try {
+        const { prompt } = req.body;
+
+        if (!prompt) {
+            return res.status(400).json({ error: "Tavsif kiritilmadi!" });
+        }
+
         const response = await openai.images.generate({
-            model: "dall-e-2", // Arzonroq model
-            prompt: req.body.prompt,
+            model: "dall-e-2", // Arzonroq va tezroq model
+            prompt: prompt,
             n: 1,
             size: "512x512",
         });
-        res.json({ url: response.data[0].url });
+
+        // Rasmni qaytarish
+        res.status(200).json({ url: response.data[0].url });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Xato tafsiloti:", error.message);
+        res.status(500).json({ error: "OpenAI xatosi: " + error.message });
     }
 });
 
-module.exports = app; // Vercel uchun muhim
-app.listen(3000);
+module.exports = app;
