@@ -3,73 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Magic</title>
+    <title>AI Image Generator</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0c29; background: linear-gradient(to right, #24243e, #302b63, #0f0c29); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 40px; border-radius: 20px; width: 100%; max-width: 500px; text-align: center; border: 1px solid rgba(255,255,255,0.2); }
-        h1 { margin-bottom: 20px; font-size: 24px; }
-        input { width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 20px; outline: none; font-size: 16px; }
-        button { width: 100%; padding: 12px; background: #ff0080; border: none; color: white; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #e00070; transform: scale(1.02); }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #image-container { margin-top: 25px; min-height: 200px; display: flex; align-items: center; justify-content: center; }
-        img { max-width: 100%; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none; }
-        .loader { display: none; border: 4px solid #f3f3f3; border-top: 4px solid #ff0080; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: #0f172a; 
+            color: white; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        h1 { margin-bottom: 20px; font-size: 24px; color: #38bdf8; }
+
+        .input-group { margin-bottom: 20px; }
+
+        input { 
+            width: 100%; 
+            padding: 12px 15px; 
+            border-radius: 10px; 
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        input:focus { border-color: #38bdf8; }
+
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: #38bdf8; 
+            border: none; 
+            color: #0f172a; 
+            font-weight: bold; 
+            font-size: 16px;
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+        }
+
+        button:hover { background: #0ea5e9; transform: translateY(-2px); }
+        button:disabled { background: #64748b; cursor: not-allowed; transform: none; }
+
+        #result-area { margin-top: 25px; min-height: 200px; display: flex; align-items: center; justify-content: center; position: relative; }
+
+        img { 
+            max-width: 100%; 
+            border-radius: 12px; 
+            display: none; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border: 2px solid #334155;
+        }
+
+        .loader { 
+            display: none; 
+            border: 4px solid #334155; 
+            border-top: 4px solid #38bdf8; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+        }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .error-msg { color: #f87171; margin-top: 10px; font-size: 14px; display: none; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h1>AI Rasm Generator</h1>
-    <input type="text" id="prompt" placeholder="Nima chizib beray? Masalan: Futuristic city...">
-    <button id="btn" onclick="generateImage()">YARATISH</button>
+<div class="container">
+    <h1>🎨 AI Rasm Generator</h1>
+    
+    <div class="input-group">
+        <input type="text" id="prompt" placeholder="Masalan: Astronaut riding a horse on Mars...">
+    </div>
+    
+    <button id="gen-btn" onclick="generateImage()">RASM YARATISH</button>
+    
+    <p id="error-text" class="error-msg"></p>
 
-    <div id="image-container">
+    <div id="result-area">
         <div id="loader" class="loader"></div>
-        <img id="output-img" src="" alt="AI generated">
+        <img id="output-img" src="" alt="AI yaratgan rasm">
     </div>
 </div>
 
 <script>
     async function generateImage() {
         const promptInput = document.getElementById('prompt');
-        const btn = document.getElementById('btn');
+        const btn = document.getElementById('gen-btn');
         const img = document.getElementById('output-img');
         const loader = document.getElementById('loader');
+        const errorText = document.getElementById('error-text');
 
-        if (!promptInput.value) return alert("Iltimos, tavsif yozing!");
+        if (!promptInput.value.trim()) {
+            alert("Iltimos, rasm tavsifini yozing!");
+            return;
+        }
 
-        // Holatni yangilash
+        // Yuklanish holati
         btn.disabled = true;
         btn.innerText = "Chizilmoqda...";
         loader.style.display = "block";
         img.style.display = "none";
+        errorText.style.display = "none";
 
         try {
-            const response = await fetch('http://localhost:3000/generate', {
+            // DIQQAT: Manzil localhost emas, nisbiy bo'lishi kerak
+            const response = await fetch('/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: promptInput.value })
             });
 
             const data = await response.json();
-            
-            if (data.url) {
+
+            if (response.ok && data.url) {
                 img.src = data.url;
-                img.style.display = "block";
+                img.onload = () => {
+                    loader.style.display = "none";
+                    img.style.display = "block";
+                };
             } else {
-                alert("Rasm yaratishda xato!");
+                throw new Error(data.error || "Rasm yaratishda xato yuz berdi");
             }
+
         } catch (error) {
-            alert("Serverga ulanib bo'lmadi!");
+            loader.style.display = "none";
+            errorText.innerText = "Xatolik: " + error.message;
+            errorText.style.display = "block";
         } finally {
             btn.disabled = false;
-            btn.innerText = "YARATISH";
-            loader.style.display = "none";
+            btn.innerText = "RASM YARATISH";
         }
     }
 </script>
+
 </body>
 </html>
