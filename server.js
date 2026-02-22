@@ -1,40 +1,30 @@
-require('dotenv').config();
 const express = require('express');
 const { OpenAI } = require('openai');
 const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static('.')); // index.html ni o'qishi uchun
 
-// OpenAI sozlamalari
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-// Rasm yaratish marshruti
 app.post('/generate', async (req, res) => {
     try {
-        const { prompt } = req.body;
-        
-        if (!prompt) {
-            return res.status(400).json({ error: "Prompt yuborilmadi" });
-        }
-
         const response = await openai.images.generate({
-            model: "dall-e-3", // Eng kuchli model
-            prompt: prompt,
+            model: "dall-e-2", // Arzonroq model
+            prompt: req.body.prompt,
             n: 1,
-            size: "1024x1024",
+            size: "512x512",
         });
-
         res.json({ url: response.data[0].url });
     } catch (error) {
-        console.error("Xatolik:", error.message);
-        res.status(500).json({ error: "Rasm yaratishda xatolik yuz berdi" });
+        res.status(500).json({ error: error.message });
     }
 });
 
-const PORT = 3000;
-app.listen(PORT, () => console.log(`Server http://localhost:${PORT} da ishlamoqda...` / ));
-              
+module.exports = app; // Vercel uchun muhim
+app.listen(3000);
