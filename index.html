@@ -1,12 +1,199 @@
-// index.html ichidagi createAIImage funksiyasini shu qismga e'tibor berib yangilang:
-const data = await response.json();
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Art Pro | Bepul Rasm Generator</title>
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --secondary: #10b981;
+            --bg: #0b0e14;
+            --card: #1a1d23;
+            --text: #ffffff;
+            --border: #2d3139;
+        }
 
-if (data.image) {
-    img.src = data.image; // Base64 formatidagi rasm
-    img.onload = () => {
-        loader.style.display = "none";
-        img.style.display = "block";
-    };
-} else {
-    throw new Error(data.error || "Rasm topilmadi");
-}
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px;
+        }
+
+        .card { 
+            background: var(--card); 
+            padding: 30px; 
+            border-radius: 24px; 
+            width: 100%; 
+            max-width: 420px; 
+            text-align: center; 
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        h2 { margin-bottom: 20px; font-weight: 700; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        input { 
+            width: 100%; 
+            padding: 14px 18px; 
+            margin-bottom: 15px; 
+            border-radius: 14px; 
+            border: 1px solid var(--border); 
+            background: #0f172a; 
+            color: white; 
+            font-size: 16px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
+
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            border: none; 
+            border-radius: 14px; 
+            font-weight: bold; 
+            font-size: 15px;
+            cursor: pointer; 
+            transition: 0.3s; 
+        }
+
+        #genBtn { background: var(--primary); color: #000; }
+        #genBtn:hover { background: #7dd3fc; transform: translateY(-2px); }
+        #genBtn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; transform: none; }
+
+        #downloadBtn { 
+            background: var(--secondary); 
+            color: #000; 
+            display: none; /* Rasm chiqmaguncha ko'rinmaydi */
+        }
+        #downloadBtn:hover { background: #34d399; transform: translateY(-2px); }
+
+        #result-box { 
+            margin-top: 25px; 
+            min-height: 250px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border: 2px dashed var(--border); 
+            border-radius: 18px; 
+            overflow: hidden; 
+            background: #0f172a;
+        }
+
+        img { width: 100%; height: auto; border-radius: 12px; display: none; }
+
+        .loader { 
+            display: none; 
+            width: 40px; 
+            height: 40px; 
+            border: 4px solid #1e293b; 
+            border-top: 4px solid var(--primary); 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .hint { font-size: 12px; color: #64748b; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🎨 AI Art Generator</h2>
+        <input type="text" id="prompt" placeholder="Masalan: Futuristic neon city...">
+        
+        <div class="btn-group">
+            <button id="genBtn" onclick="generate()">RASM YARATISH</button>
+            <button id="downloadBtn" onclick="downloadImg()">💾 RASMNI SAQLASH</button>
+        </div>
+        
+        <div id="result-box">
+            <div id="loader" class="loader"></div>
+            <img id="outputImg" src="" alt="Yaratilgan rasm">
+        </div>
+        
+        <p class="hint">Eslatma: Ingliz tilida yozish yaxshiroq natija beradi.</p>
+    </div>
+
+    <script>
+        let currentImgData = ""; // Rasmni saqlash uchun o'zgaruvchi
+
+        async function generate() {
+            const promptInput = document.getElementById('prompt');
+            const genBtn = document.getElementById('genBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const img = document.getElementById('outputImg');
+            const loader = document.getElementById('loader');
+
+            if (!promptInput.value.trim()) {
+                alert("Iltimos, rasm tavsifini yozing!");
+                return;
+            }
+
+            // Yuklanish holatini boshlash
+            genBtn.disabled = true;
+            genBtn.innerText = "Chizilmoqda...";
+            loader.style.display = "block";
+            img.style.display = "none";
+            downloadBtn.style.display = "none";
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: promptInput.value })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Serverda xatolik yuz berdi");
+                }
+
+                const data = await response.json();
+
+                if (data.image) {
+                    currentImgData = data.image; // Base64 ma'lumotini saqlaymiz
+                    img.src = data.image;
+                    img.onload = () => {
+                        loader.style.display = "none";
+                        img.style.display = "block";
+                        downloadBtn.style.display = "block"; // Yuklab olish tugmasini ko'rsatamiz
+                    };
+                } else {
+                    throw new Error(data.error || "Rasm topilmadi");
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("Xatolik: " + error.message);
+                loader.style.display = "none";
+            } finally {
+                genBtn.disabled = false;
+                genBtn.innerText = "RASM YARATISH";
+            }
+        }
+
+        // Yuklab olish funksiyasi
+        function downloadImg() {
+            if (!currentImgData) return;
+            
+            const link = document.createElement('a');
+            link.href = currentImgData;
+            link.download = `ai-vision-${Date.now()}.png`; // Fayl nomi va formati
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
