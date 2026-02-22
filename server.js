@@ -9,9 +9,9 @@ app.use(cors());
 app.post('/api/generate', async (req, res) => {
     try {
         const { prompt } = req.body;
-        if (!prompt) return res.status(400).json({ error: "Prompt kiritilmadi" });
+        if (!prompt) return res.status(400).json({ error: "Prompt yo'q" });
 
-        // Hugging Face API so'rovi
+        // Hugging Face bepul API so'rovi
         const response = await fetch(
             "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
             {
@@ -24,18 +24,13 @@ app.post('/api/generate', async (req, res) => {
             }
         );
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Hugging Face xatosi");
-        }
+        if (!response.ok) throw new Error("API xatosi: " + response.status);
 
         const buffer = await response.arrayBuffer();
         const base64Image = Buffer.from(buffer).toString('base64');
         
-        // Rasmni frontendga yuborish
         res.status(200).json({ image: `data:image/jpeg;base64,${base64Image}` });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: error.message });
     }
 });
