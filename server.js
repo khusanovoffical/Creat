@@ -1,5 +1,4 @@
 const express = require('express');
-const { OpenAI } = require('openai');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -7,32 +6,37 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// OpenAI API-ni ulash
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
-
-// Asosiy rasm yaratish funksiyasi
 app.post('/api/generate', async (req, res) => {
     try {
         const { prompt } = req.body;
+        if (!prompt) return res.status(400).json({ error: "Prompt kiritilmadi" });
 
-        if (!prompt) {
-            return res.status(400).json({ error: "Tavsif kiritilmadi!" });
+        // Hugging Face API so'rovi
+        const response = await fetch(
+            "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+            {
+                headers: { 
+                    "Authorization": `Bearer ${process.env.HF_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                method: "POST",
+                body: JSON.stringify({ inputs: prompt }),
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Hugging Face xatosi");
         }
 
-        const response = await openai.images.generate({
-            model: "dall-e-2", // Arzonroq va tezroq model
-            prompt: prompt,
-            n: 1,
-            size: "512x512",
-        });
-
-        // Rasmni qaytarish
-        res.status(200).json({ url: response.data[0].url });
+        const buffer = await response.arrayBuffer();
+        const base64Image = Buffer.from(buffer).toString('base64');
+        
+        // Rasmni frontendga yuborish
+        res.status(200).json({ image: `data:image/jpeg;base64,${base64Image}` });
     } catch (error) {
-        console.error("Xato tafsiloti:", error.message);
-        res.status(500).json({ error: "OpenAI xatosi: " + error.message });
+        console.error(error);
+        res.status(500).json({ error: error.message });
     }
 });
 
